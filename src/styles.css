@@ -2,6 +2,7 @@
   font-family: sans-serif;
   box-sizing: border-box;
   outline: 0px;
+  margin: 0px;
 }
 
 body {
@@ -25,12 +26,12 @@ body {
   padding: 16px;
 }
 
-.game-state .x-value {
+.x-value {
   color: red;
   font-weight: 700;
 }
 
-.game-state .o-value {
+.o-value {
   color: forestgreen;
   font-weight: 700;
 }
@@ -124,15 +125,29 @@ body {
   background-color: #ffffffc2;
 }
 
+.modal .container {
+  padding: 24px;
+  border-radius: 4px;
+  background-color: #fff;
+  box-shadow: 1px 0px 5px 0 rgba(0, 0, 0, 0.097),
+    0px 1px 5px 0 rgba(0, 0, 0, 0.097), -1px 0px 5px 0 rgba(0, 0, 0, 0.097),
+    0px -1px 5px 0 rgba(0, 0, 0, 0.097);
+}
+
 .modal .title {
   font-weight: 600;
   font-size: 1.2rem;
+}
+
+.modal .content {
+  margin-top: 16px;
 }
 
 .modal .actions {
   display: flex;
   align-items: center;
   justify-content: center;
+  margin-top: 16px;
 }
 
 .modal .actions .action {
