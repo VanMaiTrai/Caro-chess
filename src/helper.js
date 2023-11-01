@@ -103,8 +103,6 @@ export const checkWin = (
       revertVector
     );
 
-    console.log(countObj, revertCountObj);
-
     // win when row have 5 value, and does not block both two side
     if (
       countObj[0] + revertCountObj[0] - 1 === 5 &&
