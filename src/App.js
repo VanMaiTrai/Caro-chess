@@ -1,11 +1,13 @@
 import { Component } from "react";
-import { gameCells, gameRows, OValue, XValue } from "./constants";
+import { OValue, XValue, MIN_INITIAL } from "./constants";
 
 import GameBoard from "./GameBoard";
 import GameState from "./GameState";
 
 import {
+  calculateInitialBoardSize,
   checkWin,
+  expandBoardIfNeeded,
   getNewDataAfterClicking,
   initializeGameData,
 } from "./helper";
@@ -16,68 +18,151 @@ import "./styles.css";
 export default class App extends Component {
   constructor(props) {
     super(props);
+    const { rows, cols } = calculateInitialBoardSize();
     this.state = {
-      data: initializeGameData(gameRows, gameCells),
+      data: initializeGameData(rows, cols),
       xTurn: true,
       playing: false,
       winValue: null,
+      isDraw: false,
+      moveCount: 0,
+      lastMove: null,
+      winningCells: [],
     };
   }
 
   clickHandler = (rowIndex, cellIndex) => {
-    const { xTurn, data } = this.state;
+    const { xTurn, data, moveCount } = this.state;
     const turnValue = xTurn ? XValue : OValue;
-    const newData = getNewDataAfterClicking(
+
+    // 1. Expand board if the click is near any edge
+    const { data: expandedData, rowOffset, colOffset } = expandBoardIfNeeded(
       data,
       rowIndex,
-      cellIndex,
+      cellIndex
+    );
+    const adjustedRow = rowIndex + rowOffset;
+    const adjustedCell = cellIndex + colOffset;
+
+    // 2. Place the piece at the adjusted coordinates
+    const newData = getNewDataAfterClicking(
+      expandedData,
+      adjustedRow,
+      adjustedCell,
       turnValue
     );
 
-    if (checkWin(newData, rowIndex, cellIndex, gameRows, gameCells)) {
-      this.setState({ playing: false, winValue: turnValue });
-    }
+    const newMoveCount = moveCount + 1;
+    const lastMove = { row: adjustedRow, cell: adjustedCell };
 
-    this.setState({
-      data: getNewDataAfterClicking(data, rowIndex, cellIndex, turnValue),
-      xTurn: !xTurn,
-    });
+    // 3. Check win using actual board dimensions
+    const winResult = checkWin(newData, adjustedRow, adjustedCell);
+
+    if (winResult.length > 0) {
+      this.setState({
+        data: newData,
+        playing: false,
+        winValue: turnValue,
+        moveCount: newMoveCount,
+        lastMove,
+        winningCells: winResult,
+      });
+    } else {
+      this.setState({
+        data: newData,
+        xTurn: !xTurn,
+        moveCount: newMoveCount,
+        lastMove,
+        winningCells: [],
+      });
+    }
   };
 
   handleNewGame = () => {
+    const { rows, cols } = calculateInitialBoardSize();
     this.setState({
-      data: initializeGameData(gameRows, gameCells),
+      data: initializeGameData(rows, cols),
       xTurn: true,
       playing: true,
       winValue: null,
+      isDraw: false,
+      moveCount: 0,
+      lastMove: null,
+      winningCells: [],
     });
   };
 
   render() {
-    const { playing, xTurn, data, winValue } = this.state;
+    const {
+      playing,
+      xTurn,
+      data,
+      winValue,
+      isDraw,
+      moveCount,
+      lastMove,
+      winningCells,
+    } = this.state;
     const turnValue = xTurn ? XValue : OValue;
+    const boardSize = `${data.length}×${data[0].length}`;
+
+    // Show welcome modal only when game hasn't started
+    const showWelcome = !playing && !winValue && !isDraw && moveCount === 0;
+    // Show game-over modal when there's a winner
+    const showGameOver = !playing && winValue && moveCount > 0;
 
     return (
       <div className="App">
-        {playing && <GameState playing={playing} turnValue={turnValue} />}
+        <GameState
+          playing={playing}
+          turnValue={turnValue}
+          moveCount={moveCount}
+          winValue={winValue}
+          isDraw={isDraw}
+          onNewGame={this.handleNewGame}
+          boardSize={boardSize}
+        />
 
         <GameBoard
           data={data}
           playing={playing}
           turnValue={turnValue}
           onClick={this.clickHandler}
+          lastMove={lastMove}
+          winningCells={winningCells}
         />
 
+        {/* Welcome modal */}
         <Modal
-          open={!playing && winValue}
+          open={showWelcome}
+          title="Welcome to Caro chess"
+          content={
+            <span>
+              The board starts at <strong>{boardSize}</strong> (minimum {MIN_INITIAL}×{MIN_INITIAL}) and{" "}
+              <strong>auto-expands</strong> as you play!<br />
+              First player to get 5 in a row wins!
+            </span>
+          }
+          actions={
+            <button onClick={this.handleNewGame} className="action">
+              Start game
+            </button>
+          }
+        />
+
+        {/* Game over modal */}
+        <Modal
+          open={showGameOver}
           title="Game over"
           content={
             <span>
               The{" "}
-              <span class={winValue === XValue ? "x-value" : "o-value"}>
+              <span
+                className={winValue === XValue ? "x-value" : "o-value"}
+              >
                 {winValue}
               </span>{" "}
-              won the game.
+              won the game!
             </span>
           }
           actions={
@@ -85,16 +170,6 @@ export default class App extends Component {
               New game
             </button>
           }
-        />
-
-        <Modal
-          open={!playing && !winValue}
-          title="Welcome to Caro chess"
-          actions={[
-            <button onClick={this.handleNewGame} className="action">
-              New game
-            </button>,
-          ]}
         />
       </div>
     );
