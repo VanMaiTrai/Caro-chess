@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { XValue } from "./constants";
+import { XValue, EXPAND_THRESHOLD } from "./constants";
 import Row from "./Row";
 
 export default function GameBoard({
@@ -17,9 +17,21 @@ export default function GameBoard({
     winningCells &&
     new Set(winningCells.map((wc) => `${wc.row},${wc.cell}`));
 
-  // Auto-scroll to the last move so it's always visible
+  // Auto-scroll to the last move ONLY if it's near an edge (within EXPAND_THRESHOLD).
+  // This avoids annoying scroll-jump when clicking in the middle of the board.
   useEffect(() => {
-    if (!lastMove) return;
+    if (!lastMove || !data.length) return;
+
+    const rows = data.length;
+    const cols = data[0].length;
+
+    const nearEdge =
+      lastMove.row < EXPAND_THRESHOLD ||
+      rows - lastMove.row - 1 < EXPAND_THRESHOLD ||
+      lastMove.cell < EXPAND_THRESHOLD ||
+      cols - lastMove.cell - 1 < EXPAND_THRESHOLD;
+
+    if (!nearEdge) return;
 
     // Small delay allows the DOM to render the new cell first
     const timer = setTimeout(() => {
@@ -36,7 +48,7 @@ export default function GameBoard({
     }, 50);
 
     return () => clearTimeout(timer);
-  }, [lastMove]);
+  }, [lastMove, data]);
 
   const containerClx =
     "game-board " + (playing && (turnValue === XValue ? "x-turn" : "o-turn"));

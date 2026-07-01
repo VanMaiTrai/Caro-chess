@@ -133,11 +133,14 @@ const getLineCells = (
  * Check if the player who just moved at (rootRowIndex, rootCellIndex) has won.
  *
  * Returns an array of winning cell coordinates [{row, cell}, ...] if the player
- * has 5+ consecutive pieces in any direction. Returns an empty array if no win.
+ * has 5+ consecutive pieces in any direction, OR has 4 consecutive pieces with
+ * at least one open end (early win / "thắng sớm"). Returns empty array if no win.
  *
- * Win condition: 5 or more consecutive same-value pieces in any direction
- * (horizontal, vertical, or diagonal). Being blocked on both ends does NOT
- * invalidate a win — standard Caro / Gomoku rules.
+ * Win conditions:
+ * 1. 5+ consecutive same-value pieces in any direction.
+ * 2. 4 consecutive pieces where BOTH sides have 2+ empty cells
+ *    beyond them ("kiểm tra 2 ô về hai bên" – đảm bảo đối thủ
+ *    không có quân gần để chặn đường lên 5 → thắng sớm).
  */
 export const checkWin = (data, rootRowIndex, rootCellIndex) => {
   const maxRows = data.length;
@@ -174,8 +177,48 @@ export const checkWin = (data, rootRowIndex, rootCellIndex) => {
     // Combine: backward (excluding duplicated root) + forward
     const allCells = [...backwardCells.reverse().slice(0, -1), ...forwardCells];
 
+    // Condition 1: 5+ consecutive → standard win
     if (allCells.length >= 5) {
       return allCells;
+    }
+
+    // Condition 2: 4 consecutive with both ends safe → early win
+    // "Safe" means 2 cells beyond each end must be empty/in-bounds:
+    //   - cell sát cạnh 4 quân phải trống
+    //   - cell tiếp theo nữa cũng phải trống
+    //   (đảm bảo đối thủ không kịp chặn đường lên 5)
+    if (allCells.length === 4) {
+      const lastCell = allCells[allCells.length - 1];
+      const firstCell = allCells[0];
+
+      // --- Forward (theo hướng vector) ---
+      const f1Row = lastCell.row + vector[0];
+      const f1Cell = lastCell.cell + vector[1];
+      const f2Row = f1Row + vector[0];
+      const f2Cell = f1Cell + vector[1];
+
+      const forwardSafe =
+        isInBounds(maxRows, maxCells, f1Row, f1Cell) &&
+        data[f1Row][f1Cell].value === undefined &&
+        isInBounds(maxRows, maxCells, f2Row, f2Cell) &&
+        data[f2Row][f2Cell].value === undefined;
+
+      // --- Backward (theo hướng ngược lại) ---
+      const b1Row = firstCell.row + reverseVector[0];
+      const b1Cell = firstCell.cell + reverseVector[1];
+      const b2Row = b1Row + reverseVector[0];
+      const b2Cell = b1Cell + reverseVector[1];
+
+      const backwardSafe =
+        isInBounds(maxRows, maxCells, b1Row, b1Cell) &&
+        data[b1Row][b1Cell].value === undefined &&
+        isInBounds(maxRows, maxCells, b2Row, b2Cell) &&
+        data[b2Row][b2Cell].value === undefined;
+
+      // Both ends must have 2 ô an toàn → early win
+      if (forwardSafe && backwardSafe) {
+        return allCells;
+      }
     }
   }
 

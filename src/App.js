@@ -140,7 +140,8 @@ export default class App extends Component {
             <span>
               The board starts at <strong>{boardSize}</strong> (minimum {MIN_INITIAL}×{MIN_INITIAL}) and{" "}
               <strong>auto-expands</strong> as you play!<br />
-              First player to get 5 in a row wins!
+              Win: 5 in a row, or 4 in a row with at least one end open
+              (early win / thắng sớm)!
             </span>
           }
           actions={
